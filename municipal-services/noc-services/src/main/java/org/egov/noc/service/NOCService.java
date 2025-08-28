@@ -112,6 +112,19 @@ public class NOCService {
 			searchResult.setAuditDetails(nocRequest.getNoc().getAuditDetails());
 			searchResult.setApplicationNo(nocRequest.getNoc().getApplicationNo());
 			enrichmentService.enrichNocUpdateRequest(nocRequest, searchResult);
+			if(!ObjectUtils.isEmpty(nocRequest.getNoc().getWorkflow())
+					&& !StringUtils.isEmpty(nocRequest.getNoc().getWorkflow().getAction())) {
+				wfIntegrator.callWorkFlow(nocRequest, additionalDetails.get(NOCConstants.WORKFLOWCODE));
+				enrichmentService.postStatusEnrichment(nocRequest, additionalDetails.get(NOCConstants.WORKFLOWCODE));
+				BusinessService businessService = workflowService.getBusinessService(nocRequest.getNoc(),
+						nocRequest.getRequestInfo(), additionalDetails.get(NOCConstants.WORKFLOWCODE));
+				if(businessService == null)
+					nocRepository.update(nocRequest, true);
+				else
+					nocRepository.update(nocRequest, workflowService.isStateUpdatable(nocRequest.getNoc().getApplicationStatus(), businessService));
+			}else {
+				nocRepository.update(nocRequest, Boolean.FALSE);
+			}
 			nocRepository.update(nocRequest, Boolean.TRUE);
 
 		}else{
